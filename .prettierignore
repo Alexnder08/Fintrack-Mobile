@@ -1,0 +1,13 @@
+.agent/
+.agents/
+.claude/
+.codex/
+.cursor/
+.gemini/
+.impeccable/
+.opencode/
+.expo/
+dist/
+node_modules/
+plan.md
+assets/

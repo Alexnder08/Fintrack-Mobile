@@ -1,0 +1,55 @@
+/** Brand primitives. Components should consume `colors`, not these values directly. */
+export const palette = {
+  ink950: "#0B0F1A",
+  ink900: "#121827",
+  ink850: "#182132",
+  ink800: "#202A3C",
+  ink700: "#2B364A",
+  ink400: "#8D99AE",
+  ink300: "#AEB8CB",
+  ink100: "#E9EEF7",
+  white: "#F8FAFD",
+  teal500: "#00D4A8",
+  teal700: "#008F74",
+  teal950: "#052B24",
+  rose500: "#FF5C7A",
+  rose950: "#35141D",
+  amber500: "#FFB454",
+  amber950: "#352510",
+  blue500: "#62A8FF",
+  violet500: "#A78BFA",
+  cyan500: "#40CBEA",
+} as const;
+
+/** Dark-first semantic roles shared by Android and iOS. */
+export const colors = {
+  background: palette.ink950,
+  surface: palette.ink900,
+  surfaceRaised: palette.ink850,
+  surfaceMuted: palette.ink800,
+  primary: palette.teal500,
+  primaryPressed: palette.teal700,
+  onPrimary: palette.teal950,
+  text: palette.white,
+  textSecondary: palette.ink300,
+  textMuted: palette.ink400,
+  border: palette.ink700,
+  positive: palette.teal500,
+  positiveSurface: palette.teal950,
+  negative: palette.rose500,
+  negativeSurface: palette.rose950,
+  warning: palette.amber500,
+  warningSurface: palette.amber950,
+  info: palette.blue500,
+  disabled: palette.ink700,
+  onDisabled: palette.ink300,
+  scrim: "rgba(3, 7, 15, 0.72)",
+  categories: {
+    essential: palette.blue500,
+    lifestyle: palette.violet500,
+    variable: palette.amber500,
+    savings: palette.cyan500,
+  },
+} as const;
+
+export type ColorName = Exclude<keyof typeof colors, "categories">;
