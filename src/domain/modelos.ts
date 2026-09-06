@@ -70,7 +70,7 @@ export interface Presupuesto {
   readonly porcentajeAdvertencia: number;
 }
 
-export type EstadoMeta = "activa" | "completada" | "archivada";
+export type EstadoMeta = "activa" | "completada" | "cancelada";
 
 export interface MetaAhorro {
   readonly id: Identificador;
