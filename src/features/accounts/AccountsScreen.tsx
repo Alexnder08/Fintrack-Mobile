@@ -32,6 +32,7 @@ export interface AccountSummary {
 
 export interface AccountsScreenProps {
   status?: FeatureStatus;
+  isDemo?: boolean;
   netWorth?: number;
   assets?: number;
   debts?: number;
@@ -113,14 +114,20 @@ interface AccountRowProps {
 function AccountRow({ account, currency, locale, onPress }: AccountRowProps) {
   const Icon = iconByKind[account.kind];
   const isDebt = account.kind === "credit" && account.balance < 0;
+  const isDisabled = !onPress;
 
   return (
     <Pressable
       accessibilityHint="Abre el detalle y los movimientos de esta cuenta"
       accessibilityLabel={`${account.name}, ${account.detail}`}
       accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled }}
+      disabled={isDisabled}
       onPress={onPress}
-      style={({ pressed }) => pressed && styles.pressed}
+      style={({ pressed }) => [
+        pressed && styles.pressed,
+        isDisabled && styles.disabled,
+      ]}
     >
       <Surface padding="md" tone="raised">
         <View style={styles.accountHeader}>
@@ -155,6 +162,7 @@ function AccountRow({ account, currency, locale, onPress }: AccountRowProps) {
 
 export function AccountsScreen({
   status = "ready",
+  isDemo = true,
   netWorth = 7450.8,
   assets = 7950.8,
   debts = 500,
@@ -185,10 +193,11 @@ export function AccountsScreen({
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text role="heading">Cuentas</Text>
-          <DemoNotice />
+          {isDemo ? <DemoNotice /> : null}
         </View>
         <IconButton
           accessibilityLabel="Agregar cuenta"
+          disabled={!onAddAccount}
           onPress={onAddAccount}
           variant="primary"
         >
@@ -244,17 +253,22 @@ export function AccountsScreen({
                 currency={currency}
                 key={account.id}
                 locale={locale}
-                onPress={() => onAccountPress?.(account)}
+                onPress={
+                  onAccountPress ? () => onAccountPress(account) : undefined
+                }
               />
             ))}
           </View>
         ) : (
           <Pressable
+            accessibilityState={{ disabled: !onAddAccount }}
             accessibilityRole="button"
+            disabled={!onAddAccount}
             onPress={onAddAccount}
             style={({ pressed }) => [
               styles.addAccount,
               pressed && styles.pressed,
+              !onAddAccount && styles.disabled,
             ]}
           >
             <Plus color={colors.primary} size={22} />
@@ -354,6 +368,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.72,
+  },
+  disabled: {
+    opacity: 0.46,
   },
   addAccount: {
     alignItems: "center",

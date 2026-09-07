@@ -13,6 +13,7 @@ const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 export const isSupabaseConfigured = Boolean(
   supabaseUrl && supabasePublishableKey,
 );
+export const isDemoMode = process.env.EXPO_PUBLIC_FINTRACK_DEMO_MODE === "true";
 
 export const supabase = createClient(
   supabaseUrl ?? "https://configuracion-pendiente.supabase.co",

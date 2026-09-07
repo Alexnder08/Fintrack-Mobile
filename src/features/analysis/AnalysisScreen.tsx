@@ -31,6 +31,7 @@ export interface BudgetSummary {
 
 export interface AnalysisScreenProps {
   status?: FeatureStatus;
+  isDemo?: boolean;
   period?: AnalysisPeriod;
   totalSpent?: number;
   currency?: string;
@@ -87,6 +88,7 @@ const demoBudgets: BudgetSummary[] = [
 
 export function AnalysisScreen({
   status = "ready",
+  isDemo = true,
   period,
   totalSpent = 2061.8,
   currency = "PEN",
@@ -99,6 +101,9 @@ export function AnalysisScreen({
 }: AnalysisScreenProps) {
   const [localPeriod, setLocalPeriod] = useState<AnalysisPeriod>("month");
   const selectedPeriod = period ?? localPeriod;
+  const visiblePeriods: AnalysisPeriod[] = onPeriodChange
+    ? ["week", "month", "year"]
+    : ["month"];
 
   if (status !== "ready") {
     return (
@@ -122,7 +127,7 @@ export function AnalysisScreen({
     <Screen contentContainerStyle={styles.screenContent} scrollable>
       <View style={styles.headingGroup}>
         <Text role="heading">Análisis</Text>
-        <DemoNotice />
+        {isDemo ? <DemoNotice /> : null}
       </View>
 
       <View
@@ -130,18 +135,23 @@ export function AnalysisScreen({
         accessibilityRole="tablist"
         style={styles.periodSelector}
       >
-        {(Object.keys(periodLabels) as AnalysisPeriod[]).map((item) => {
+        {visiblePeriods.map((item) => {
           const isSelected = item === selectedPeriod;
           return (
             <Pressable
               accessibilityRole="tab"
-              accessibilityState={{ selected: isSelected }}
+              accessibilityState={{
+                disabled: !onPeriodChange,
+                selected: isSelected,
+              }}
+              disabled={!onPeriodChange}
               key={item}
               onPress={() => selectPeriod(item)}
               style={({ pressed }) => [
                 styles.periodOption,
                 isSelected && styles.periodOptionSelected,
                 pressed && styles.pressed,
+                !onPeriodChange && !isSelected && styles.disabled,
               ]}
             >
               <Text
@@ -327,6 +337,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  disabled: {
+    opacity: 0.46,
   },
   totalHeader: {
     alignItems: "flex-start",

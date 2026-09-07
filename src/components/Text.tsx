@@ -31,7 +31,7 @@ export function Text({
   tone = "primary",
   align,
   style,
-  maxFontSizeMultiplier = 2,
+  maxFontSizeMultiplier,
   ...props
 }: TextProps) {
   return (

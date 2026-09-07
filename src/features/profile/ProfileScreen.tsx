@@ -10,7 +10,6 @@ import {
   Target,
 } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
-import { useState } from "react";
 import { Pressable, StyleSheet, Switch, View } from "react-native";
 
 import { Money, Screen, Surface, Text } from "../../components";
@@ -33,6 +32,7 @@ export interface SavingsGoalSummary {
 
 export interface ProfileScreenProps {
   status?: FeatureStatus;
+  isDemo?: boolean;
   name?: string;
   email?: string;
   savingsRate?: number;
@@ -95,15 +95,20 @@ function SettingRow({
   onPress,
   isLast = false,
 }: SettingRowProps) {
+  const isDisabled = !onPress;
+
   return (
     <Pressable
       accessibilityHint={description}
       accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled }}
+      disabled={isDisabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.settingRow,
         !isLast && styles.divider,
         pressed && styles.pressed,
+        isDisabled && styles.disabled,
       ]}
     >
       <View accessible={false} style={styles.settingIcon}>
@@ -122,8 +127,9 @@ function SettingRow({
 
 export function ProfileScreen({
   status = "ready",
+  isDemo = true,
   name = "Joel Alexander",
-  email = "joel.demo@fintrack.app",
+  email,
   savingsRate = 28,
   activeGoals = 2,
   streakDays = 12,
@@ -140,8 +146,9 @@ export function ProfileScreen({
   onSignOut,
   onRetry,
 }: ProfileScreenProps) {
-  const [localBiometrics, setLocalBiometrics] = useState(false);
-  const biometricsActive = biometricsEnabled ?? localBiometrics;
+  const biometricsActive = biometricsEnabled ?? false;
+  const visibleEmail =
+    email ?? (isDemo ? "joel.demo@fintrack.app" : "Correo no disponible");
 
   if (status !== "ready") {
     return (
@@ -157,15 +164,14 @@ export function ProfileScreen({
   }
 
   const changeBiometrics = (enabled: boolean) => {
-    if (onBiometricsChange) onBiometricsChange(enabled);
-    else setLocalBiometrics(enabled);
+    onBiometricsChange?.(enabled);
   };
 
   return (
     <Screen contentContainerStyle={styles.screenContent} scrollable>
       <View style={styles.headingGroup}>
         <Text role="heading">Perfil</Text>
-        <DemoNotice />
+        {isDemo ? <DemoNotice /> : null}
       </View>
 
       <View style={styles.identity}>
@@ -177,7 +183,7 @@ export function ProfileScreen({
         <View style={styles.identityCopy}>
           <Text role="title">{name}</Text>
           <Text role="bodySmall" tone="secondary">
-            {email}
+            {visibleEmail}
           </Text>
         </View>
       </View>
@@ -304,6 +310,8 @@ export function ProfileScreen({
             </View>
             <Switch
               accessibilityLabel="Bloqueo biométrico"
+              accessibilityState={{ disabled: !onBiometricsChange }}
+              disabled={!onBiometricsChange}
               ios_backgroundColor={colors.surfaceMuted}
               onValueChange={changeBiometrics}
               thumbColor={
@@ -337,10 +345,13 @@ export function ProfileScreen({
 
       <Pressable
         accessibilityRole="button"
+        accessibilityState={{ disabled: !onSignOut }}
+        disabled={!onSignOut}
         onPress={onSignOut}
         style={({ pressed }) => [
           styles.signOutButton,
           pressed && styles.pressed,
+          !onSignOut && styles.disabled,
         ]}
       >
         <LogOut color={colors.negative} size={19} />
@@ -447,6 +458,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  disabled: {
+    opacity: 0.46,
   },
   signOutButton: {
     alignItems: "center",

@@ -29,11 +29,12 @@ export interface WeeklyExpense {
 
 export interface HomeScreenProps {
   status?: FeatureStatus;
+  isDemo?: boolean;
   userName?: string;
   balance?: number;
   income?: number;
   expenses?: number;
-  comparisonPercent?: number;
+  comparisonPercent?: number | null;
   currency?: string;
   locale?: string;
   balanceHidden?: boolean;
@@ -90,12 +91,20 @@ interface QuickActionProps {
 }
 
 function QuickAction({ label, icon: Icon, onPress }: QuickActionProps) {
+  const isDisabled = !onPress;
+
   return (
     <Pressable
       accessibilityLabel={label}
       accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled }}
+      disabled={isDisabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.quickAction,
+        pressed && styles.pressed,
+        isDisabled && styles.disabled,
+      ]}
     >
       <View accessible={false} style={styles.quickActionIcon}>
         <Icon color={colors.primary} size={22} strokeWidth={2} />
@@ -109,6 +118,7 @@ function QuickAction({ label, icon: Icon, onPress }: QuickActionProps) {
 
 export function HomeScreen({
   status = "ready",
+  isDemo = true,
   userName = "Joel",
   balance = 7450.8,
   income = 5600,
@@ -134,7 +144,7 @@ export function HomeScreen({
     ...weeklyExpenses.map((item) => item.amount),
     1,
   );
-  const trendTone = comparisonPercent >= 0 ? "positive" : "negative";
+  const trendTone = (comparisonPercent ?? 0) >= 0 ? "positive" : "negative";
 
   if (status !== "ready") {
     return (
@@ -159,10 +169,11 @@ export function HomeScreen({
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text role="heading">Hola, {userName}</Text>
-          <DemoNotice />
+          {isDemo ? <DemoNotice /> : null}
         </View>
         <IconButton
           accessibilityLabel="Abrir notificaciones"
+          disabled={!onNotifications}
           onPress={onNotifications}
         >
           <Bell color={colors.text} size={22} strokeWidth={2} />
@@ -195,10 +206,12 @@ export function HomeScreen({
           locale={locale}
           size="display"
         />
-        <Text role="caption" tone={trendTone}>
-          {comparisonPercent >= 0 ? "+" : ""}
-          {comparisonPercent.toFixed(1)}% frente al periodo anterior
-        </Text>
+        {comparisonPercent === null ? null : (
+          <Text role="caption" tone={trendTone}>
+            {comparisonPercent >= 0 ? "+" : ""}
+            {comparisonPercent.toFixed(1)}% frente al periodo anterior
+          </Text>
+        )}
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
             <Text role="caption" tone="secondary">
@@ -356,6 +369,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  disabled: {
+    opacity: 0.46,
   },
   section: {
     gap: spacing.sm,

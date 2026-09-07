@@ -107,12 +107,23 @@ export class ServicioFintrack {
   async cargarPantallas(ahora = new Date()): Promise<DatosPantallasFintrack> {
     const datos = await this.repositorio.cargarDatos();
     const periodo = periodoMesLocal(ahora);
-    const movimientosPeriodo = datos.movimientos.filter((movimiento) =>
+    const cuentasMonedaPerfil = datos.cuentas.filter(
+      (cuenta) => cuenta.codigoMoneda === datos.perfil.codigoMoneda,
+    );
+    const idsCuenta = new Set(cuentasMonedaPerfil.map((cuenta) => cuenta.id));
+    const movimientosMonedaPerfil = datos.movimientos.filter(
+      (movimiento) =>
+        movimiento.codigoMoneda === datos.perfil.codigoMoneda &&
+        idsCuenta.has(movimiento.cuentaId) &&
+        (!movimiento.cuentaDestinoId ||
+          idsCuenta.has(movimiento.cuentaDestinoId)),
+    );
+    const movimientosPeriodo = movimientosMonedaPerfil.filter((movimiento) =>
       movimientoEnPeriodo(movimiento, periodo),
     );
     const resumenCompleto = calcularResumenFinanciero(
-      datos.cuentas,
-      datos.movimientos,
+      cuentasMonedaPerfil,
+      movimientosMonedaPerfil,
     );
     const resumenPeriodo = calcularResumenFinanciero([], movimientosPeriodo);
 
@@ -178,7 +189,7 @@ export class ServicioFintrack {
       perfil: datos.perfil,
       inicio: {
         resumen: resumenCompleto,
-        movimientosRecientes: [...datos.movimientos]
+        movimientosRecientes: [...movimientosMonedaPerfil]
           .sort((a, b) => Date.parse(b.ocurridoEn) - Date.parse(a.ocurridoEn))
           .slice(0, 5),
       },
@@ -189,7 +200,7 @@ export class ServicioFintrack {
         presupuestos,
       },
       cuentas: {
-        elementos: datos.cuentas
+        elementos: cuentasMonedaPerfil
           .filter((cuenta) => !cuenta.archivada)
           .map((cuenta) => ({
             cuenta,
