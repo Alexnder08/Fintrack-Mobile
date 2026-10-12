@@ -10,9 +10,10 @@ import {
   Target,
 } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Switch, View } from "react-native";
 
-import { Money, Screen, Surface, Text } from "../../components";
+import { Button, Money, Screen, Surface, Text } from "../../components";
 import { colors, radii, spacing, touchTarget } from "../../theme";
 import {
   DemoNotice,
@@ -31,6 +32,7 @@ export interface SavingsGoalSummary {
 }
 
 export interface ProfileScreenProps {
+  notice?: ReactNode;
   status?: FeatureStatus;
   isDemo?: boolean;
   name?: string;
@@ -126,6 +128,7 @@ function SettingRow({
 }
 
 export function ProfileScreen({
+  notice,
   status = "ready",
   isDemo = true,
   name = "Joel Alexander",
@@ -153,11 +156,18 @@ export function ProfileScreen({
   if (status !== "ready") {
     return (
       <Screen>
+        {notice}
         <FeatureState
           emptyDescription="Completa tu nombre y moneda para personalizar Fintrack."
           emptyTitle="Completa tu perfil"
           onRetry={onRetry}
           status={status}
+        />
+        <Button
+          label="Cerrar sesión"
+          variant="outline"
+          disabled={!onSignOut}
+          onPress={onSignOut}
         />
       </Screen>
     );
@@ -169,6 +179,7 @@ export function ProfileScreen({
 
   return (
     <Screen contentContainerStyle={styles.screenContent} scrollable>
+      {notice}
       <View style={styles.headingGroup}>
         <Text role="heading">Perfil</Text>
         {isDemo ? <DemoNotice /> : null}
@@ -213,12 +224,12 @@ export function ProfileScreen({
           </View>
           <View style={styles.statDivider} />
           <View
-            accessibilityLabel={`Racha de ${streakDays} días`}
+            accessibilityLabel={`${streakDays} días con registros`}
             style={styles.stat}
           >
             <Flame color={colors.warning} size={21} />
             <Text align="center" role="caption" tone="secondary">
-              {streakDays} días
+              {streakDays} días registrados
             </Text>
           </View>
         </View>
@@ -292,43 +303,50 @@ export function ProfileScreen({
       <View style={styles.section}>
         <SectionHeader title="Preferencias" />
         <Surface padding="none">
-          <SettingRow
-            description="Alertas de presupuesto y recordatorios"
-            icon={Bell}
-            label="Notificaciones"
-            onPress={onNotifications}
-          />
-          <View style={[styles.settingRow, styles.divider]}>
-            <View accessible={false} style={styles.settingIcon}>
-              <Fingerprint color={colors.textSecondary} size={21} />
-            </View>
-            <View style={styles.settingCopy}>
-              <Text role="label">Bloqueo biométrico</Text>
-              <Text role="caption" tone="secondary">
-                Protege el acceso en este dispositivo
-              </Text>
-            </View>
-            <Switch
-              accessibilityLabel="Bloqueo biométrico"
-              accessibilityState={{ disabled: !onBiometricsChange }}
-              disabled={!onBiometricsChange}
-              ios_backgroundColor={colors.surfaceMuted}
-              onValueChange={changeBiometrics}
-              thumbColor={
-                biometricsActive ? colors.onPrimary : colors.textSecondary
-              }
-              trackColor={{ false: colors.surfaceMuted, true: colors.primary }}
-              value={biometricsActive}
+          {onNotifications ? (
+            <SettingRow
+              description="Alertas de presupuesto y recordatorios"
+              icon={Bell}
+              label="Notificaciones"
+              onPress={onNotifications}
             />
-          </View>
+          ) : null}
+          {onBiometricsChange ? (
+            <View style={[styles.settingRow, styles.divider]}>
+              <View accessible={false} style={styles.settingIcon}>
+                <Fingerprint color={colors.textSecondary} size={21} />
+              </View>
+              <View style={styles.settingCopy}>
+                <Text role="label">Bloqueo biométrico</Text>
+                <Text role="caption" tone="secondary">
+                  Protege el acceso en este dispositivo
+                </Text>
+              </View>
+              <Switch
+                accessibilityLabel="Bloqueo biométrico"
+                accessibilityState={{ disabled: !onBiometricsChange }}
+                disabled={!onBiometricsChange}
+                ios_backgroundColor={colors.surfaceMuted}
+                onValueChange={changeBiometrics}
+                thumbColor={
+                  biometricsActive ? colors.onPrimary : colors.textSecondary
+                }
+                trackColor={{
+                  false: colors.surfaceMuted,
+                  true: colors.primary,
+                }}
+                value={biometricsActive}
+              />
+            </View>
+          ) : null}
           <SettingRow
-            description="Tema oscuro y contraste"
+            description="Nombre, privacidad y uso de la app"
             icon={Moon}
-            label="Apariencia"
+            label="Mi perfil y privacidad"
             onPress={onAppearance}
           />
           <SettingRow
-            description="CSV o resumen PDF"
+            description="Copia de tus datos en JSON"
             icon={Download}
             label="Exportar datos"
             onPress={onExport}

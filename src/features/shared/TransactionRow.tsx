@@ -3,7 +3,7 @@ import {
   ArrowLeftRight,
   ArrowUpRight,
 } from "lucide-react-native";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { Money, Text } from "../../components";
 import { colors, radii, spacing } from "../../theme";
@@ -19,6 +19,7 @@ export interface TransactionItem {
 }
 
 interface TransactionRowProps {
+  onPress?: () => void;
   item: TransactionItem;
   currency: string;
   locale?: string;
@@ -36,6 +37,7 @@ export function TransactionRow({
   currency,
   locale,
   isLast = false,
+  onPress,
 }: TransactionRowProps) {
   const Icon = iconByKind[item.kind];
   const iconColor =
@@ -46,7 +48,9 @@ export function TransactionRow({
         : colors.info;
 
   return (
-    <View
+    <Pressable
+      onPress={onPress}
+      accessibilityRole={onPress ? "button" : undefined}
       accessibilityLabel={`${item.title}, ${item.detail}`}
       style={[styles.container, !isLast && styles.divider]}
     >
@@ -68,7 +72,7 @@ export function TransactionRow({
         locale={locale}
         size="small"
       />
-    </View>
+    </Pressable>
   );
 }
 

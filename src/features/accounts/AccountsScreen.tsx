@@ -6,6 +6,7 @@ import {
   WalletCards,
 } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { IconButton, Money, Screen, Surface, Text } from "../../components";
@@ -31,6 +32,7 @@ export interface AccountSummary {
 }
 
 export interface AccountsScreenProps {
+  notice?: ReactNode;
   status?: FeatureStatus;
   isDemo?: boolean;
   netWorth?: number;
@@ -161,6 +163,7 @@ function AccountRow({ account, currency, locale, onPress }: AccountRowProps) {
 }
 
 export function AccountsScreen({
+  notice,
   status = "ready",
   isDemo = true,
   netWorth = 7450.8,
@@ -190,6 +193,7 @@ export function AccountsScreen({
 
   return (
     <Screen contentContainerStyle={styles.screenContent} scrollable>
+      {notice}
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text role="heading">Cuentas</Text>

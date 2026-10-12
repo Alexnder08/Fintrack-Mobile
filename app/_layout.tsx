@@ -12,6 +12,8 @@ import { useEffect, useState } from "react";
 import { useFonts } from "expo-font";
 
 import { colors } from "@/src/theme";
+import { SesionProvider } from "@/src/hooks/useSesion";
+import { AccesoFintrack } from "@/src/features/auth/AccesoFintrack";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -43,13 +45,17 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.background },
-        }}
-      />
+      <SesionProvider>
+        <AccesoFintrack>
+          <StatusBar style="light" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          />
+        </AccesoFintrack>
+      </SesionProvider>
     </QueryClientProvider>
   );
 }

@@ -19,10 +19,13 @@ import {
   type FilaPresupuesto,
   type MovimientoConMoneda,
   type NuevoMovimiento,
+  type NuevaCuenta,
 } from "../data";
+import type { Cuenta } from "../domain";
 import type {
   RepositorioFintrack,
   ErrorRepositorioFintrack as TipoErrorRepositorio,
+  Plan,
 } from "./repositorio-fintrack";
 import { ErrorRepositorioFintrack } from "./repositorio-fintrack";
 
@@ -42,6 +45,72 @@ export class RepositorioFintrackSupabase implements RepositorioFintrack {
   readonly modo = "supabase" as const;
 
   constructor(private readonly cliente: SupabaseClient) {}
+
+  async actualizarNombre(nombre: string): Promise<void> {
+    const usuario = await this.obtenerUsuario();
+    exigirDatos(
+      await this.cliente
+        .from("perfiles")
+        .update({ nombre_mostrar: nombre })
+        .eq("usuario_id", usuario.id)
+        .select("usuario_id")
+        .single(),
+      "actualizar perfil",
+    );
+  }
+  async guardarPlan(plan: Plan): Promise<void> {
+    const usuario = await this.obtenerUsuario();
+    const tabla =
+      plan.tipo === "meta"
+        ? "metas_ahorro"
+        : plan.tipo === "presupuesto"
+          ? "presupuestos"
+          : "aportes_meta";
+    const campos =
+      plan.tipo === "meta"
+        ? {
+            nombre: plan.nombre,
+            importe_objetivo: centavosADecimal(plan.importeCentavos),
+          }
+        : plan.tipo === "presupuesto"
+          ? {
+              categoria_id: plan.categoriaId,
+              periodo_inicio: plan.periodoInicio,
+              importe: centavosADecimal(plan.importeCentavos),
+              porcentaje_advertencia: 80,
+            }
+          : {
+              meta_id: plan.metaId,
+              importe: centavosADecimal(plan.importeCentavos),
+            };
+    const consulta = plan.id
+      ? this.cliente
+          .from(tabla)
+          .update(campos)
+          .eq("id", plan.id)
+          .eq("usuario_id", usuario.id)
+      : this.cliente.from(tabla).insert({ ...campos, usuario_id: usuario.id });
+    exigirDatos(await consulta.select("id").single(), "guardar " + plan.tipo);
+  }
+  async eliminarPlan(tipo: Plan["tipo"], id: string): Promise<void> {
+    const usuario = await this.obtenerUsuario();
+    const tabla =
+      tipo === "meta"
+        ? "metas_ahorro"
+        : tipo === "presupuesto"
+          ? "presupuestos"
+          : "aportes_meta";
+    exigirDatos(
+      await this.cliente
+        .from(tabla)
+        .delete()
+        .eq("id", id)
+        .eq("usuario_id", usuario.id)
+        .select("id")
+        .single(),
+      "eliminar " + tipo,
+    );
+  }
 
   private async obtenerUsuario() {
     const { data, error } = await this.cliente.auth.getUser();
@@ -82,6 +151,7 @@ export class RepositorioFintrackSupabase implements RepositorioFintrack {
   async cargarDatos(): Promise<DatosFintrack> {
     const usuario = await this.obtenerUsuario();
     const usuarioId = usuario.id;
+    await this.prepararPerfil(usuarioId, usuario.email ?? "");
 
     const resultados = await Promise.all([
       this.cliente
@@ -157,6 +227,165 @@ export class RepositorioFintrackSupabase implements RepositorioFintrack {
     };
   }
 
+  private async prepararPerfil(
+    usuarioId: string,
+    correo: string,
+  ): Promise<void> {
+    const perfil = await this.cliente
+      .from("perfiles")
+      .select("usuario_id")
+      .eq("usuario_id", usuarioId)
+      .maybeSingle();
+    if (perfil.error)
+      throw new ErrorRepositorioFintrack("perfil", perfil.error);
+    if (!perfil.data) {
+      const { error } = await this.cliente.from("perfiles").upsert(
+        {
+          usuario_id: usuarioId,
+          nombre_mostrar: correo.split("@")[0] || "Mi perfil",
+          codigo_moneda: "PEN",
+          configuracion_regional: "es-PE",
+          zona_horaria: "America/Lima",
+          onboarding_completado: true,
+        },
+        { onConflict: "usuario_id", ignoreDuplicates: true },
+      );
+      if (error) throw new ErrorRepositorioFintrack("crear perfil", error);
+    }
+    const categorias = await this.cliente
+      .from("categorias")
+      .select("id")
+      .eq("usuario_id", usuarioId)
+      .limit(1);
+    if (categorias.error)
+      throw new ErrorRepositorioFintrack("categorias", categorias.error);
+    if (categorias.data?.length === 0) {
+      const { error } = await this.cliente.from("categorias").insert([
+        {
+          usuario_id: usuarioId,
+          nombre: "Ingresos",
+          tipo: "ingreso",
+          icono: "wallet",
+          color: "#00D4A8",
+        },
+        {
+          usuario_id: usuarioId,
+          nombre: "Alimentación",
+          tipo: "gasto",
+          icono: "shopping-cart",
+          color: "#62A8FF",
+        },
+        {
+          usuario_id: usuarioId,
+          nombre: "Transporte",
+          tipo: "gasto",
+          icono: "bus",
+          color: "#FFB454",
+        },
+        {
+          usuario_id: usuarioId,
+          nombre: "Otros gastos",
+          tipo: "gasto",
+          icono: "receipt",
+          color: "#A78BFA",
+        },
+      ]);
+      if (error && error.code !== "23505")
+        throw new ErrorRepositorioFintrack("crear categorias", error);
+    }
+  }
+
+  async actualizarMovimiento(
+    id: string,
+    nuevo: NuevoMovimiento,
+  ): Promise<MovimientoConMoneda> {
+    const usuario = await this.obtenerUsuario();
+    const resultado = await this.cliente
+      .from("movimientos")
+      .update({
+        tipo: nuevo.tipo,
+        importe: centavosADecimal(nuevo.importeCentavos),
+        codigo_moneda: nuevo.codigoMoneda,
+        cuenta_id: nuevo.cuentaId,
+        cuenta_destino_id: nuevo.cuentaDestinoId,
+        categoria_id: nuevo.categoriaId,
+        descripcion: nuevo.descripcion ?? null,
+        ocurrido_en: nuevo.ocurridoEn,
+      })
+      .eq("id", id)
+      .eq("usuario_id", usuario.id)
+      .select(
+        "id,usuario_id,tipo,importe,codigo_moneda,cuenta_id,cuenta_destino_id,categoria_id,descripcion,ocurrido_en",
+      )
+      .single();
+    return mapearMovimiento(
+      exigirDatos(
+        resultado as ResultadoSupabase<FilaMovimiento>,
+        "actualizar movimiento",
+      ),
+    );
+  }
+
+  async crearCuenta(nueva: NuevaCuenta): Promise<Cuenta> {
+    const usuario = await this.obtenerUsuario();
+    const resultado = await this.cliente
+      .from("cuentas")
+      .insert({
+        usuario_id: usuario.id,
+        nombre: nueva.nombre,
+        tipo: nueva.tipo,
+        codigo_moneda: nueva.codigoMoneda,
+        saldo_inicial: centavosADecimal(nueva.saldoInicialCentavos),
+        color: nueva.color ?? "#00D4A8",
+        esta_archivada: nueva.archivada,
+      })
+      .select(
+        "id,usuario_id,nombre,tipo,codigo_moneda,saldo_inicial,color,esta_archivada",
+      )
+      .single();
+    return mapearCuenta(
+      exigirDatos(resultado as ResultadoSupabase<FilaCuenta>, "crear cuenta"),
+    );
+  }
+
+  async actualizarCuenta(id: string, nueva: NuevaCuenta): Promise<Cuenta> {
+    const usuario = await this.obtenerUsuario();
+    const resultado = await this.cliente
+      .from("cuentas")
+      .update({
+        nombre: nueva.nombre,
+        tipo: nueva.tipo,
+        codigo_moneda: nueva.codigoMoneda,
+        saldo_inicial: centavosADecimal(nueva.saldoInicialCentavos),
+        color: nueva.color ?? "#00D4A8",
+        esta_archivada: nueva.archivada,
+      })
+      .eq("id", id)
+      .eq("usuario_id", usuario.id)
+      .select(
+        "id,usuario_id,nombre,tipo,codigo_moneda,saldo_inicial,color,esta_archivada",
+      )
+      .single();
+    return mapearCuenta(
+      exigirDatos(
+        resultado as ResultadoSupabase<FilaCuenta>,
+        "actualizar cuenta",
+      ),
+    );
+  }
+
+  async eliminarCuenta(id: string): Promise<void> {
+    const usuario = await this.obtenerUsuario();
+    const resultado = await this.cliente
+      .from("cuentas")
+      .delete()
+      .eq("id", id)
+      .eq("usuario_id", usuario.id)
+      .select("id")
+      .single();
+    exigirDatos(resultado, "eliminar cuenta");
+  }
+
   async crearMovimiento(nuevo: NuevoMovimiento): Promise<MovimientoConMoneda> {
     const usuario = await this.obtenerUsuario();
     const fila = {
@@ -188,15 +417,14 @@ export class RepositorioFintrackSupabase implements RepositorioFintrack {
 
   async eliminarMovimiento(id: string): Promise<void> {
     const usuario = await this.obtenerUsuario();
-    const { error } = await this.cliente
+    const resultado = await this.cliente
       .from("movimientos")
       .delete()
       .eq("id", id)
-      .eq("usuario_id", usuario.id);
-
-    if (error) {
-      throw new ErrorRepositorioFintrack("eliminar movimiento", error);
-    }
+      .eq("usuario_id", usuario.id)
+      .select("id")
+      .single();
+    exigirDatos(resultado, "eliminar movimiento");
   }
 }
 

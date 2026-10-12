@@ -1,5 +1,5 @@
 import { CircleAlert, PieChart } from "lucide-react-native";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Money, Screen, Surface, Text } from "../../components";
@@ -30,6 +30,7 @@ export interface BudgetSummary {
 }
 
 export interface AnalysisScreenProps {
+  notice?: ReactNode;
   status?: FeatureStatus;
   isDemo?: boolean;
   period?: AnalysisPeriod;
@@ -87,6 +88,7 @@ const demoBudgets: BudgetSummary[] = [
 ];
 
 export function AnalysisScreen({
+  notice,
   status = "ready",
   isDemo = true,
   period,
@@ -125,6 +127,7 @@ export function AnalysisScreen({
 
   return (
     <Screen contentContainerStyle={styles.screenContent} scrollable>
+      {notice}
       <View style={styles.headingGroup}>
         <Text role="heading">Análisis</Text>
         {isDemo ? <DemoNotice /> : null}

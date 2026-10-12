@@ -106,3 +106,5 @@ type SinIdentidad<T> = T extends unknown ? Omit<T, "id" | "usuarioId"> : never;
 
 /** Conserva la union discriminada y evita combinaciones de campos invalidas. */
 export type NuevoMovimiento = SinIdentidad<MovimientoConMoneda>;
+
+export type NuevaCuenta = SinIdentidad<Cuenta>;

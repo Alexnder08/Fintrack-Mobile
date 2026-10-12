@@ -1,5 +1,5 @@
 import {
-  Bell,
+  ChartPie,
   Eye,
   EyeOff,
   MoreHorizontal,
@@ -8,7 +8,7 @@ import {
   WalletCards,
 } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { IconButton, Money, Screen, Surface, Text } from "../../components";
@@ -28,6 +28,7 @@ export interface WeeklyExpense {
 }
 
 export interface HomeScreenProps {
+  notice?: ReactNode;
   status?: FeatureStatus;
   isDemo?: boolean;
   userName?: string;
@@ -47,6 +48,7 @@ export interface HomeScreenProps {
   onPay?: () => void;
   onMore?: () => void;
   onViewAll?: () => void;
+  onTransactionPress?: (id: string) => void;
   onRetry?: () => void;
 }
 
@@ -117,6 +119,7 @@ function QuickAction({ label, icon: Icon, onPress }: QuickActionProps) {
 }
 
 export function HomeScreen({
+  notice,
   status = "ready",
   isDemo = true,
   userName = "Joel",
@@ -136,6 +139,7 @@ export function HomeScreen({
   onPay,
   onMore,
   onViewAll,
+  onTransactionPress,
   onRetry,
 }: HomeScreenProps) {
   const [localHidden, setLocalHidden] = useState(false);
@@ -166,17 +170,18 @@ export function HomeScreen({
 
   return (
     <Screen contentContainerStyle={styles.screenContent} scrollable>
+      {notice}
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text role="heading">Hola, {userName}</Text>
           {isDemo ? <DemoNotice /> : null}
         </View>
         <IconButton
-          accessibilityLabel="Abrir notificaciones"
+          accessibilityLabel="Abrir análisis"
           disabled={!onNotifications}
           onPress={onNotifications}
         >
-          <Bell color={colors.text} size={22} strokeWidth={2} />
+          <ChartPie color={colors.text} size={22} strokeWidth={2} />
         </IconButton>
       </View>
 
@@ -240,10 +245,14 @@ export function HomeScreen({
       </Surface>
 
       <View accessibilityLabel="Acciones rápidas" style={styles.quickActions}>
-        <QuickAction icon={Send} label="Enviar" onPress={onSend} />
-        <QuickAction icon={WalletCards} label="Recibir" onPress={onReceive} />
-        <QuickAction icon={ReceiptText} label="Pagar" onPress={onPay} />
-        <QuickAction icon={MoreHorizontal} label="Más" onPress={onMore} />
+        <QuickAction icon={Send} label="Transferir" onPress={onSend} />
+        <QuickAction icon={WalletCards} label="Ingreso" onPress={onReceive} />
+        <QuickAction icon={ReceiptText} label="Gasto" onPress={onPay} />
+        <QuickAction
+          icon={MoreHorizontal}
+          label="Movimientos"
+          onPress={onMore}
+        />
       </View>
 
       <View style={styles.section}>
@@ -254,7 +263,10 @@ export function HomeScreen({
         >
           <View style={styles.chart}>
             {weeklyExpenses.map((item) => {
-              const height = Math.max((item.amount / maximumExpense) * 116, 8);
+              const height =
+                item.amount > 0
+                  ? Math.max((item.amount / maximumExpense) * 116, 8)
+                  : 0;
               const formatted = new Intl.NumberFormat(locale, {
                 style: "currency",
                 currency,
@@ -293,6 +305,11 @@ export function HomeScreen({
                 item={transaction}
                 key={transaction.id}
                 locale={locale}
+                onPress={
+                  onTransactionPress
+                    ? () => onTransactionPress(transaction.id)
+                    : undefined
+                }
               />
             ))}
           </Surface>

@@ -1,18 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useSesion } from "./useSesion";
 
 import type { AccountsScreenProps } from "../features/accounts";
 import type { AnalysisScreenProps } from "../features/analysis";
 import type { HomeScreenProps } from "../features/home";
 import type { ProfileScreenProps } from "../features/profile";
 import type { FeatureStatus, TransactionItem } from "../features/shared";
-import {
-  crearRepositorioFintrack,
-  ServicioFintrack,
-  type DatosPantallasFintrack,
-} from "../services";
+import { type DatosPantallasFintrack } from "../services";
 import { colors } from "../theme";
 
-const servicio = new ServicioFintrack(crearRepositorioFintrack());
 const A_UNIDADES = 100;
 
 function aUnidades(centavos: number): number {
@@ -67,7 +64,7 @@ function propsDesdeDatos(datos: DatosPantallasFintrack) {
     currency,
     locale,
     transactions,
-    ...(isDemo ? {} : { weeklyExpenses: [] }),
+    weeklyExpenses: [...datos.inicio.gastosSemanales],
   };
 
   const analysis: AnalysisScreenProps = {
@@ -124,7 +121,11 @@ function propsDesdeDatos(datos: DatosPantallasFintrack) {
     name: datos.perfil.nombreMostrar,
     email:
       datos.perfil.correo ??
-      (isDemo ? "joel.demo@fintrack.app" : "Correo no disponible"),
+      (isDemo
+        ? "joel.demo@fintrack.app"
+        : datos.modo === "local"
+          ? "Guardado en este dispositivo"
+          : "Correo no disponible"),
     savingsRate: datos.perfilFinanciero.porcentajeAhorro,
     activeGoals: datos.perfilFinanciero.metas.filter((meta) => !meta.completada)
       .length,
@@ -137,17 +138,27 @@ function propsDesdeDatos(datos: DatosPantallasFintrack) {
     })),
     currency,
     locale,
-    streakDays: isDemo ? 12 : 0,
+    streakDays: new Set(
+      datos.datos.movimientos.map((m) =>
+        new Date(m.ocurridoEn).toLocaleDateString(locale),
+      ),
+    ).size,
   };
 
   return { home, analysis, accounts, profile };
 }
 
-export function useFintrack() {
+export function useFintrack(periodo: "week" | "month" | "year" = "month") {
+  const { servicio, usuarioId, local, sesion } = useSesion();
   const query = useQuery({
-    queryKey: ["fintrack", "pantallas"],
-    queryFn: () => servicio.cargarPantallas(),
+    queryKey: ["fintrack", usuarioId, "pantallas", periodo],
+    queryFn: () => servicio.cargarPantallas(new Date(), periodo),
+    enabled: local || Boolean(sesion),
   });
+  const props = useMemo(
+    () => (query.data ? propsDesdeDatos(query.data) : undefined),
+    [query.data],
+  );
   const status: FeatureStatus = query.isPending
     ? "loading"
     : query.isError
@@ -158,6 +169,6 @@ export function useFintrack() {
     ...query,
     status,
     mode: query.data?.modo,
-    props: query.data ? propsDesdeDatos(query.data) : undefined,
+    props,
   };
 }
